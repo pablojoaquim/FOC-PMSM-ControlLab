@@ -1,0 +1,52 @@
+@startuml
+title FOC Controller Block Diagram
+skinparam componentStyle rectangle
+
+actor "Controller" as Controller
+
+component "vd_ref, vq_ref\n(rotor_angle)" as refs
+component "inverse_park()\n-> valpha, vbeta" as park
+component "inverse_clarke()\n-> phase_a, phase_b, phase_c" as clarke
+component "run_bldc_motor_simulation()\n(netlist: ltspice/motor_model.cir)\nwrites: phaseA.csv/B/C" as sim
+component "LTSpice model\nltspice/motor_model.cir" as ltspice
+component "ia, ib, ic\n(from .raw)" as currents
+component "abc_to_alpha_beta()\n-> alpha, beta" as abc2ab
+component "alpha_beta_to_dq()\n-> id, iq\n(rotor_angle_sim)" as ab2dq
+component "PI current controller\n-> vd_ref, vq_ref" as control
+
+refs --> park : vd_ref, vq_ref\n(rotor_angle)
+park --> clarke : valpha, vbeta
+clarke --> sim : phase_a, phase_b, phase_c\n(phaseA.csv, phaseB.csv, phaseC.csv)
+sim --> ltspice : run netlist (calls LTSpice)
+ltspice --> currents : ia, ib, ic (raw)
+currents --> abc2ab
+abc2ab --> ab2dq : alpha, beta
+ab2dq --> control : id, iq
+control --> refs : updated vd_ref, vq_ref
+sim --> ab2dq : rotor_angle_sim
+
+note right of park
+  Implementation: src/main.py -> inverse_park()
+end note
+note right of clarke
+  Implementation: src/main.py -> inverse_clarke()
+end note
+note right of sim
+  Implementation: src/ltspice_driver.py -> run_bldc_motor_simulation(), write_pwl(), get_ltspice_command()
+  Netlist: ltspice/motor_model.cir
+  CSV inputs: ltspice/phaseA.csv, phaseB.csv, phaseC.csv
+end note
+note right of ab2dq
+  Implementation: src/main.py -> abc_to_alpha_beta(), alpha_beta_to_dq()
+  Outputs: id_current, iq_current
+end note
+note right of control
+  Implementation: src/main.py -> PI control update of vd_ref and vq_ref
+  Uses latest segment current error to correct next segment
+end note
+
+footer
+Generate diagram: plantuml doc/foc_controller.puml
+Outputs: foc_controller.png (or use online PlantUML)
+end footer
+@enduml

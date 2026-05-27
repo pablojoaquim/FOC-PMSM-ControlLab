@@ -31,8 +31,23 @@ This will:
 - generate FOC phase voltage commands
 - run `ltspice/motor_model.cir`
 - read phase currents from the LTSpice raw output
+- compute dq-axis currents from measurements
+- update the voltage commands in a closed-loop PI control cycle
 - plot voltages, currents, and dq-axis currents
 - save `foc_simulation.png`
+
+## Closed-loop FOC simulation
+
+The simulation in `src/main.py` now implements a measurement-feedback loop:
+
+- generate phase voltage command waveforms from `vd_ref` and `vq_ref`
+- write `phaseA.csv`, `phaseB.csv`, `phaseC.csv`
+- run the LTSpice motor model in short segments
+- read phase currents `ia`, `ib`, `ic` from the LTSpice `.raw` output
+- transform currents from `abc` to `dq` using `abc_to_alpha_beta()` and `alpha_beta_to_dq()`
+- update `vd_ref` and `vq_ref` with a PI controller based on `id`/`iq` error
+
+See the block diagram in `doc/foc_controller.puml` for the full control flow.
 
 ## LTSpice path configuration
 
