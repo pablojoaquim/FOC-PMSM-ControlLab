@@ -47,7 +47,18 @@ The simulation in `src/main.py` now implements a measurement-feedback loop:
 - transform currents from `abc` to `dq` using `abc_to_alpha_beta()` and `alpha_beta_to_dq()`
 - update `vd_ref` and `vq_ref` with a PI controller based on `id`/`iq` error
 
-See the block diagram in `doc/foc_controller.puml` for the full control flow.
+See the block diagram in `doc/foc_controller.puml` and the sequence diagram in `doc/foc_sequence.puml` for the full control flow.
+
+Generating diagram images
+
+If you have PlantUML installed locally (or use the online server), generate PNGs with:
+
+```bash
+plantuml doc/foc_controller.puml
+plantuml doc/foc_sequence.puml
+```
+
+This will produce `doc/foc_controller.png` and `doc/foc_sequence.png`.
 
 ## LTSpice path configuration
 

@@ -1,0 +1,29 @@
+@startuml
+title FOC Simulation Sequence Diagram
+actor Operator
+participant "src/main.py" as Main
+participant "ltspice_driver.py" as Driver
+participant "LTSpice" as LTSpice
+participant "PyLTSpice / Raw" as Raw
+participant "Controller (PI)" as PI
+
+Operator -> Main: run simulation
+Main -> Main: compute rotor_angle(time)
+Main -> Main: inverse_park(vd_ref,vq_ref,theta)
+Main -> Main: inverse_clarke(valpha,vbeta)
+Main -> Driver: write phaseA.csv/B/C
+Driver -> LTSpice: start (netlist: motor_model.cir)
+LTSpice -> Raw: produce .raw data
+Driver -> Main: return ia, ib, ic, time
+Main -> Main: abc_to_alpha_beta(ia,ib,ic)
+Main -> Main: alpha_beta_to_dq(alpha,beta,rotor_angle_sim)
+Main -> PI: provide id, iq
+PI -> Main: update vd_ref, vq_ref
+Main -> Main: generate next segment voltages (loop)
+
+note over Main,PI
+  This loop may run in short segments.
+  `run_bldc_motor_simulation()` handles CSV and LTSpice invocation.
+end note
+
+@enduml
