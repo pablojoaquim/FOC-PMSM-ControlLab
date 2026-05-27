@@ -1,0 +1,24 @@
+* BLDC Motor Model for Python FOC Simulation
+* This model uses three phase PWL voltage sources and back-EMF
+.param Rph=0.5 Lph=2e-3 Ke=0.05 omega=1257.0
+.param phaseA=0 phaseB=-2*pi/3 phaseC=2*pi/3
+
+Va A 0 PWL FILE="phaseA.csv"
+Vb B 0 PWL FILE="phaseB.csv"
+Vc C 0 PWL FILE="phaseC.csv"
+
+Raa A A2 {Rph}
+Laa A2 0 {Lph}
+Rbb B B2 {Rph}
+Lbb B2 0 {Lph}
+Rcc C C2 {Rph}
+Lcc C2 0 {Lph}
+
+BEMA A2 0 V={Ke*omega*sin(phaseA + omega*time)}
+BEMB B2 0 V={Ke*omega*sin(phaseB + omega*time)}
+BEMC C2 0 V={Ke*omega*sin(phaseC + omega*time)}
+
+.tran 0 20m 0 50u
+.option numdgt=6
+.backanno
+.end
