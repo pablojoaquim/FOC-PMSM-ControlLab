@@ -1,10 +1,17 @@
 from pathlib import Path
+import json
 
 import numpy as np
 import matplotlib.pyplot as plt
-from ltspice_driver import run_bldc_motor_simulation
+from bldc_simulator import run_bldc_motor_simulation
+from ltspice_driver import get_ltspice_command
 
 SQRT3 = np.sqrt(3)
+
+
+def load_config(config_path):
+    with open(config_path, 'r') as f:
+        return json.load(f)
 
 
 def inverse_park(vd, vq, theta):
@@ -34,33 +41,39 @@ def alpha_beta_to_dq(alpha, beta, theta):
 
 if __name__ == '__main__':
     project_root = Path(__file__).resolve().parent.parent
-    netlist_file = project_root / 'ltspice' / 'motor_model.cir'
+    config_path = project_root / 'config.json'
+    config = load_config(config_path)
+
+    netlist_path = project_root / config['ltspice']['netlist_path']
+    duration = config['simulation']['duration']
+    timestep = config['simulation']['timestep']
+    verbose = config['simulation']['verbose']
+
+    pole_pairs = config['motor']['pole_pairs']
+    mechanical_rpm = config['motor']['mechanical_rpm']
+
+    foc = config['foc_controller']
+    control_period = foc['control_period']
+    Kp_d = foc['kp_d']
+    Ki_d = foc['ki_d']
+    Kp_q = foc['kp_q']
+    Ki_q = foc['ki_q']
+    id_ref = foc['id_ref']
+    iq_ref = foc['iq_ref']
+    vd_ref = foc['vd_ref_init']
+    vq_ref = foc['vq_ref_init']
+    integral_clamp = foc['integral_clamp']
+    voltage_clamp = foc['voltage_clamp']
 
     print('Preparing BLDC FOC simulation...')
 
-    duration = 0.02
-    timestep = 50e-6
     time = np.arange(0.0, duration + timestep / 2, timestep)
 
-    pole_pairs = 4
-    mechanical_rpm = 1200.0
     mechanical_omega = mechanical_rpm * 2.0 * np.pi / 60.0
     electrical_omega = pole_pairs * mechanical_omega
     rotor_angle = electrical_omega * time
 
     # Closed-loop FOC control with segment-based updates
-    vd_ref = 0.0      # d-axis reference (field weakening)
-    vq_ref = 0.5      # q-axis reference (torque) - start small, let controller ramp up
-
-    # Control parameters (low gains for stability)
-    control_period = 2e-3  # 2 ms control update period
-    Kp_d = 0.01        # proportional gain for d-axis current error
-    Kp_q = 0.01        # proportional gain for q-axis current error
-    Ki_d = 0.001       # integral gain for d-axis
-    Ki_q = 0.001       # integral gain for q-axis
-    id_ref = 0.0       # d-axis current reference
-    iq_ref = 50.0      # q-axis current reference
-    
     # Integral state
     id_integral = 0.0
     iq_integral = 0.0
@@ -91,7 +104,16 @@ if __name__ == '__main__':
         phase_a_seg, phase_b_seg, phase_c_seg = inverse_clarke(valpha_seg, vbeta_seg)
 
         # Run LTSpice for this segment
-        results = run_bldc_motor_simulation(netlist_file, time_seg, phase_a_seg, phase_b_seg, phase_c_seg, verbose=False)
+        ltspice_cmd = get_ltspice_command(config['ltspice']['command'])
+        results = run_bldc_motor_simulation(
+            netlist_path,
+            time_seg,
+            phase_a_seg,
+            phase_b_seg,
+            phase_c_seg,
+            ltspice_command=ltspice_cmd,
+            verbose=verbose
+        )
 
         ia_seg = results['ia']
         ib_seg = results['ib']
@@ -110,20 +132,20 @@ if __name__ == '__main__':
         # PI controller for d and q axes
         id_error = id_ref - id_meas
         iq_error = iq_ref - iq_meas
-        
+
         id_integral += id_error * control_period
         iq_integral += iq_error * control_period
-        
+
         # Clamp integrals to prevent windup
-        id_integral = np.clip(id_integral, -5.0, 5.0)
-        iq_integral = np.clip(iq_integral, -5.0, 5.0)
+        id_integral = np.clip(id_integral, -integral_clamp, integral_clamp)
+        iq_integral = np.clip(iq_integral, -integral_clamp, integral_clamp)
 
         vd_ref += Kp_d * id_error + Ki_d * id_integral
         vq_ref += Kp_q * iq_error + Ki_q * iq_integral
-        
+
         # Clamp voltage references to reasonable range
-        vd_ref = np.clip(vd_ref, -10.0, 10.0)
-        vq_ref = np.clip(vq_ref, -10.0, 10.0)
+        vd_ref = np.clip(vd_ref, -voltage_clamp, voltage_clamp)
+        vq_ref = np.clip(vq_ref, -voltage_clamp, voltage_clamp)
 
         # Log for diagnostics
         vd_ref_log = np.append(vd_ref_log, vd_ref)
