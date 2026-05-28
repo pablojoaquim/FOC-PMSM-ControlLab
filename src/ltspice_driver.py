@@ -12,8 +12,14 @@ from PyLTSpice import RawRead
 
 
 def parse_command_string(command_string):
+    """
+    Parse command string into list, handling Windows paths with spaces.
+    
+    For Windows commands with spaces in paths, it's safer to pass as a direct list.
+    This function attempts basic parsing but is best used with simple commands.
+    """
     command_string = command_string.replace('\\"', '"')
-    return shlex.split(command_string)
+    return shlex.split(command_string, posix=False)
 
 
 def get_ltspice_command(command_override=None):
@@ -95,7 +101,7 @@ def run_ltspice_simulation(netlist_path, stimuli=None, ltspice_command=None, ver
     ltspice_command = format_ltspice_command(ltspice_command, netlist_path.name)
 
     if verbose:
-        print('LTSpice command:', ' '.join(ltspice_command))
+        print('LTSpice command:', ' '.join(str(c) for c in ltspice_command))
         print('Working directory:', workdir)
 
     subprocess.run(ltspice_command, cwd=workdir, check=True)

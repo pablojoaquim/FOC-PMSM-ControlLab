@@ -1,0 +1,29 @@
+{
+  "ltspice": {
+    "command": ["C:\\Users\\pablo.joaquim\\AppData\\Local\\Programs\\ADI\\LTspice\\LTspice.exe", "-Run", "-b"],
+    "_comment": "LTSpice command: null = auto-detect, array = direct command list, string = parsed as shell command, or set LTSPICE_CMD environment variable",
+    "netlist_path": "ltspice/motor_model.cir"
+  },
+  "simulation": {
+    "duration": 0.02,
+    "timestep": 5e-05,
+    "verbose": true
+  },
+  "motor": {
+    "pole_pairs": 4,
+    "mechanical_rpm": 1200.0
+  },
+  "foc_controller": {
+    "control_period": 0.002,
+    "kp_d": 0.01,
+    "ki_d": 0.001,
+    "kp_q": 0.01,
+    "ki_q": 0.001,
+    "id_ref": 0.0,
+    "iq_ref": 50.0,
+    "vd_ref_init": 0.0,
+    "vq_ref_init": 0.5,
+    "integral_clamp": 5.0,
+    "voltage_clamp": 10.0
+  }
+}
