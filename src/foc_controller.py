@@ -1,21 +1,64 @@
-#!/usr/bin/env python3
-"""
-Field-Oriented Control (FOC) module for BLDC motor simulation.
+# ******************************************************************************
+#
+# @file foc_controller.py
+#
+# ******************************************************************************
+# @copyright Copyright (c) 2026 - Pablo Joaquim
+#             MIT License: https://opensource.org/licenses/MIT
+# ******************************************************************************
+#
+# @section DESC DESCRIPTION:
+#   Field-Oriented Control algorithms, transforms, and simulation routines.
+#
+# @section ABBR ABBREVIATIONS:
+#   - FOC: Field-Oriented Control.
+#   - PI: Proportional-Integral.
+#   - DQ: Direct-Quadrature reference frame.
+#
+# @section TRACE TRACEABILITY INFO:
+#   - Design Document(s):
+#     - doc/foc_motor_control_technical.md
+#
+#   - Requirements Document(s):
+#     - README.md
+#
+#   - Applicable Standards (in order of precedence: highest first):
+#     - MIT License
+#
+# ******************************************************************************
 
-Implements Park and Clarke transforms, PI current control loops, and closed-loop
-FOC simulation with configurable gains and limits.
-"""
 
+# ******************************************************************************
+# * import modules
+# ******************************************************************************
 import numpy as np
 from bldc_simulator import run_bldc_motor_simulation
 from ltspice_driver import get_ltspice_command
 
+
+# ******************************************************************************
+# * Objects Declarations
+# ******************************************************************************
+
+
+# ******************************************************************************
+# * Object and variables Definitions
+# ******************************************************************************
 SQRT3 = np.sqrt(3)
 
 
+# ******************************************************************************
+# * Class Definitions
+# ******************************************************************************
 class FOCController:
     """Field-Oriented Control controller for BLDC motors."""
 
+    # ******************************************************************************
+    # * @fn         __init__
+    # * @brief      Initialize controller parameters, limits, and log buffers.
+    # * @param [in] config - Configuration dictionary for controller and motor.
+    # * @return     None
+    # ******************************************************************************
     def __init__(self, config):
         """
         Initialize FOC controller from configuration.
@@ -61,6 +104,12 @@ class FOCController:
         self.id_measured_log = np.array([])
         self.iq_measured_log = np.array([])
 
+
+    # ******************************************************************************
+    # * @fn         reset
+    # * @brief      Reset controller integrators and logged signals.
+    # * @return     None
+    # ******************************************************************************
     def reset(self):
         """Reset controller state for a new simulation."""
         self.id_integral = 0.0
@@ -70,6 +119,13 @@ class FOCController:
         self.id_measured_log = np.array([])
         self.iq_measured_log = np.array([])
 
+    # ******************************************************************************
+    # * @fn         update
+    # * @brief      Execute one PI current-control update in D-Q frame.
+    # * @param [in] id_meas - Measured D-axis current.
+    # * @param [in] iq_meas - Measured Q-axis current.
+    # * @return     Tuple with updated voltage references (vd_ref, vq_ref).
+    # ******************************************************************************
     def update(self, id_meas, iq_meas):
         """
         Update FOC controller with measured D-Q currents.
@@ -110,7 +166,14 @@ class FOCController:
         return self.vd_ref, self.vq_ref
 
 
-# Transform functions
+# ******************************************************************************
+# * @fn         inverse_park
+# * @brief      Transform D-Q voltages to alpha-beta stationary components.
+# * @param [in] vd - D-axis voltage component.
+# * @param [in] vq - Q-axis voltage component.
+# * @param [in] theta - Electrical angle in radians.
+# * @return     Tuple containing (valpha, vbeta).
+# ******************************************************************************
 def inverse_park(vd, vq, theta):
     """Transform D-Q voltages to alpha-beta (stationary frame)."""
     valpha = vd * np.cos(theta) - vq * np.sin(theta)
@@ -118,6 +181,13 @@ def inverse_park(vd, vq, theta):
     return valpha, vbeta
 
 
+# ******************************************************************************
+# * @fn         inverse_clarke
+# * @brief      Transform alpha-beta voltages into A-B-C phase voltages.
+# * @param [in] valpha - Alpha-axis voltage component.
+# * @param [in] vbeta - Beta-axis voltage component.
+# * @return     Tuple containing (va, vb, vc).
+# ******************************************************************************
 def inverse_clarke(valpha, vbeta):
     """Transform alpha-beta voltages to three-phase A-B-C."""
     va = valpha
@@ -126,6 +196,14 @@ def inverse_clarke(valpha, vbeta):
     return va, vb, vc
 
 
+# ******************************************************************************
+# * @fn         abc_to_alpha_beta
+# * @brief      Transform three-phase currents into alpha-beta components.
+# * @param [in] ia - Phase A current.
+# * @param [in] ib - Phase B current.
+# * @param [in] ic - Phase C current.
+# * @return     Tuple containing (alpha, beta).
+# ******************************************************************************
 def abc_to_alpha_beta(ia, ib, ic):
     """Transform three-phase A-B-C currents to alpha-beta (stationary frame)."""
     alpha = ia
@@ -133,6 +211,14 @@ def abc_to_alpha_beta(ia, ib, ic):
     return alpha, beta
 
 
+# ******************************************************************************
+# * @fn         alpha_beta_to_dq
+# * @brief      Transform alpha-beta currents into D-Q rotating components.
+# * @param [in] alpha - Alpha-axis current component.
+# * @param [in] beta - Beta-axis current component.
+# * @param [in] theta - Electrical angle in radians.
+# * @return     Tuple containing (id_current, iq_current).
+# ******************************************************************************
 def alpha_beta_to_dq(alpha, beta, theta):
     """Transform alpha-beta currents to D-Q (rotor-aligned frame)."""
     id_current = alpha * np.cos(theta) + beta * np.sin(theta)
@@ -140,6 +226,17 @@ def alpha_beta_to_dq(alpha, beta, theta):
     return id_current, iq_current
 
 
+# ******************************************************************************
+# * @fn         run_foc_closed_loop_simulation
+# * @brief      Run segment-based closed-loop FOC with LTSpice plant updates.
+# * @param [in] controller - Initialized FOCController instance.
+# * @param [in] netlist_path - Path to LTSpice netlist.
+# * @param [in] duration - Total simulation duration in seconds.
+# * @param [in] timestep - Simulation timestep in seconds.
+# * @param [in] config_ltspice - LTSpice execution configuration dictionary.
+# * @param [in] verbose - Enables detailed logging when True.
+# * @return     Dictionary with simulated currents, voltages, and control logs.
+# ******************************************************************************
 def run_foc_closed_loop_simulation(controller, netlist_path, duration, timestep, config_ltspice, verbose=False):
     """
     Run closed-loop FOC simulation with segment-based control updates.

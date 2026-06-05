@@ -1,5 +1,35 @@
-#!/usr/bin/env python3
+# ******************************************************************************
+#
+# @file ltspice_driver.py
+#
+# ******************************************************************************
+# @copyright Copyright (c) 2026 - Pablo Joaquim
+#             MIT License: https://opensource.org/licenses/MIT
+# ******************************************************************************
+#
+# @section DESC DESCRIPTION:
+#   LTSpice command resolution, stimulus generation, and raw trace handling.
+#
+# @section ABBR ABBREVIATIONS:
+#   - LTSpice: Linear Technology SPICE simulator.
+#   - PWL: Piecewise Linear.
+#
+# @section TRACE TRACEABILITY INFO:
+#   - Design Document(s):
+#     - doc/foc_motor_control_technical.md
+#
+#   - Requirements Document(s):
+#     - README.md
+#
+#   - Applicable Standards (in order of precedence: highest first):
+#     - MIT License
+#
+# ******************************************************************************
 
+
+# ******************************************************************************
+# * import modules
+# ******************************************************************************
 import os
 import shlex
 import shutil
@@ -11,6 +41,25 @@ import numpy as np
 from PyLTSpice import RawRead
 
 
+# ******************************************************************************
+# * Objects Declarations
+# ******************************************************************************
+
+
+# ******************************************************************************
+# * Object and variables Definitions
+# ******************************************************************************
+
+
+# ******************************************************************************
+# * Function Definitions
+# ******************************************************************************
+# ******************************************************************************
+# * @fn         parse_command_string
+# * @brief      Parse command text while preserving Windows path semantics.
+# * @param [in] command_string - Raw LTSpice command string.
+# * @return     Tokenized command list suitable for subprocess execution.
+# ******************************************************************************
 def parse_command_string(command_string):
     """
     Parse command string into list, handling Windows paths with spaces.
@@ -22,6 +71,12 @@ def parse_command_string(command_string):
     return shlex.split(command_string, posix=False)
 
 
+# ******************************************************************************
+# * @fn         get_ltspice_command
+# * @brief      Resolve the LTSpice executable command from config or system.
+# * @param [in] command_override - Optional command override string or list.
+# * @return     Command list ready to execute LTSpice in batch mode.
+# ******************************************************************************
 def get_ltspice_command(command_override=None):
     """
     Get the LTSpice command to execute.
@@ -59,6 +114,14 @@ def get_ltspice_command(command_override=None):
     )
 
 
+# ******************************************************************************
+# * @fn         write_pwl
+# * @brief      Write a piecewise-linear waveform file for LTSpice stimuli.
+# * @param [in] filename - Output file path.
+# * @param [in] time - Time array.
+# * @param [in] values - Value array aligned with time.
+# * @return     None
+# ******************************************************************************
 def write_pwl(filename, time, values):
     filename = Path(filename)
     with filename.open('w', newline='\n') as f:
@@ -66,6 +129,13 @@ def write_pwl(filename, time, values):
             f.write(f'{t:.9e}\t{v:.9e}\n')
 
 
+# ******************************************************************************
+# * @fn         write_stimulus_files
+# * @brief      Generate all stimulus input files required by a simulation.
+# * @param [in] workdir - Directory where stimulus files are written.
+# * @param [in] stimuli - Mapping of filename to (time, values) arrays.
+# * @return     None
+# ******************************************************************************
 def write_stimulus_files(workdir, stimuli):
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
@@ -75,6 +145,13 @@ def write_stimulus_files(workdir, stimuli):
         write_pwl(file_path, time, values)
 
 
+# ******************************************************************************
+# * @fn         format_ltspice_command
+# * @brief      Append netlist argument and normalize command invocation shape.
+# * @param [in] raw_command - Base command as string or token list.
+# * @param [in] netlist_name - Netlist filename passed to LTSpice.
+# * @return     Fully formatted command list for subprocess.run.
+# ******************************************************************************
 def format_ltspice_command(raw_command, netlist_name):
     if isinstance(raw_command, str):
         raw_command = parse_command_string(raw_command)
@@ -86,6 +163,15 @@ def format_ltspice_command(raw_command, netlist_name):
     return raw_command + [str(netlist_name)]
 
 
+# ******************************************************************************
+# * @fn         run_ltspice_simulation
+# * @brief      Execute LTSpice and return parsed raw trace data.
+# * @param [in] netlist_path - Path to LTSpice netlist.
+# * @param [in] stimuli - Optional stimulus map written before execution.
+# * @param [in] ltspice_command - Optional command override.
+# * @param [in] verbose - Enables additional diagnostics when True.
+# * @return     Dictionary containing raw reader, names, and trace arrays.
+# ******************************************************************************
 def run_ltspice_simulation(netlist_path, stimuli=None, ltspice_command=None, verbose=False):
     netlist_path = Path(netlist_path)
     if not netlist_path.exists():

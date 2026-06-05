@@ -1,3 +1,34 @@
+# ******************************************************************************
+#
+# @file main.py
+#
+# ******************************************************************************
+# @copyright Copyright (c) 2026 - Pablo Joaquim
+#             MIT License: https://opensource.org/licenses/MIT
+# ******************************************************************************
+#
+# @section DESC DESCRIPTION:
+#   Entry point for the FOC PMSM Control Lab closed-loop simulation.
+#
+# @section ABBR ABBREVIATIONS:
+#   - FOC: Field-Oriented Control.
+#   - PMSM: Permanent Magnet Synchronous Motor.
+#
+# @section TRACE TRACEABILITY INFO:
+#   - Design Document(s):
+#     - doc/foc_motor_control_technical.md
+#
+#   - Requirements Document(s):
+#     - README.md
+#
+#   - Applicable Standards (in order of precedence: highest first):
+#     - MIT License
+#
+# ******************************************************************************
+
+# ******************************************************************************
+# * import modules
+# ******************************************************************************
 from pathlib import Path
 
 import numpy as np
@@ -6,6 +37,19 @@ from config import load_config_with_paths
 from foc_controller import FOCController, run_foc_closed_loop_simulation
 
 
+# ******************************************************************************
+# * Objects Declarations
+# ******************************************************************************
+
+
+# ******************************************************************************
+# * Object and variables Definitions
+# ******************************************************************************
+
+
+# ******************************************************************************
+# * Function Definitions
+# ******************************************************************************
 if __name__ == '__main__':
     # Load configuration and project paths
     config, paths = load_config_with_paths()

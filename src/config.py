@@ -1,14 +1,57 @@
-#!/usr/bin/env python3
-"""
-Configuration management for FOC simulation.
+# ******************************************************************************
+#
+# @file config.py
+#
+# ******************************************************************************
+# @copyright Copyright (c) 2026 - Pablo Joaquim
+#             MIT License: https://opensource.org/licenses/MIT
+# ******************************************************************************
+#
+# @section DESC DESCRIPTION:
+#   Configuration loading and project-path resolution helpers.
+#
+# @section ABBR ABBREVIATIONS:
+#   - FOC: Field-Oriented Control.
+#
+# @section TRACE TRACEABILITY INFO:
+#   - Design Document(s):
+#     - doc/foc_motor_control_technical.md
+#
+#   - Requirements Document(s):
+#     - config.json
+#
+#   - Applicable Standards (in order of precedence: highest first):
+#     - MIT License
+#
+# ******************************************************************************
 
-Loads and validates simulation config from JSON file.
-"""
 
+# ******************************************************************************
+# * import modules
+# ******************************************************************************
 import json
 from pathlib import Path
 
 
+# ******************************************************************************
+# * Objects Declarations
+# ******************************************************************************
+
+
+# ******************************************************************************
+# * Object and variables Definitions
+# ******************************************************************************
+
+
+# ******************************************************************************
+# * Function Definitions
+# ******************************************************************************
+# ******************************************************************************
+# * @fn         load_config
+# * @brief      Load simulation configuration from the JSON file.
+# * @param [in] config_path - Path to the configuration file.
+# * @return     Configuration dictionary parsed from JSON.
+# ******************************************************************************
 def load_config(config_path):
     """
     Load configuration from JSON file.
@@ -33,6 +76,12 @@ def load_config(config_path):
     return config
 
 
+# ******************************************************************************
+# * @fn         get_project_paths
+# * @brief      Build canonical project paths used by the application.
+# * @param [in] project_root - Optional root path; inferred when None.
+# * @return     Dictionary with resolved project paths.
+# ******************************************************************************
 def get_project_paths(project_root=None):
     """
     Get standard project paths.
@@ -58,6 +107,12 @@ def get_project_paths(project_root=None):
     }
 
 
+# ******************************************************************************
+# * @fn         load_config_with_paths
+# * @brief      Load configuration and attach resolved netlist path.
+# * @param [in] project_root - Optional root path; inferred when None.
+# * @return     Tuple containing configuration and path dictionaries.
+# ******************************************************************************
 def load_config_with_paths(project_root=None):
     """
     Load configuration and return config with resolved netlist path.
